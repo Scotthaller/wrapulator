@@ -39,10 +39,54 @@ const PANELS = [
   { id: 'pillars',      label: 'A/B/C Pillars',      sqft:  8 },
 ];
 
+// ─── Finishes ─────────────────────────────────────────────────────
+const FINISHES = {
+  basic: [
+    { id: 'gloss',       label: 'Gloss',        hasColor: true  },
+    { id: 'matte',       label: 'Matte',        hasColor: true  },
+    { id: 'satin',       label: 'Satin',        hasColor: true  },
+    { id: 'super-gloss', label: 'Super Gloss',  hasColor: true  },
+    { id: 'metallic',    label: 'Metallic',     hasColor: true  },
+    { id: 'pearlescent', label: 'Pearlescent',  hasColor: true  },
+  ],
+  premium: [
+    { id: 'chrome',       label: 'Chrome',           hasColor: false },
+    { id: 'candy',        label: 'Candy',            hasColor: true  },
+    { id: 'color-shift',  label: 'Color Shift',      hasColor: false },
+    { id: 'carbon-fiber', label: 'Carbon Fiber',     hasColor: false },
+    { id: 'brushed',      label: 'Brushed Metal',    hasColor: false },
+    { id: 'diamond',      label: 'Diamond',          hasColor: false },
+    { id: 'glitter',      label: 'Glitter',          hasColor: true  },
+    { id: 'fluorescent',  label: 'Neon / Fluorescent', hasColor: true },
+  ],
+};
+
+// ─── Colors ────────────────────────────────────────────────────────
+const COLORS = [
+  { id: 'black',    label: 'Black',    css: '#111'  },
+  { id: 'white',    label: 'White',    css: '#f0f0f0' },
+  { id: 'silver',   label: 'Silver',   css: 'linear-gradient(135deg,#d8d8d8,#909090)' },
+  { id: 'gray',     label: 'Gray',     css: '#707070' },
+  { id: 'red',      label: 'Red',      css: '#cc0000' },
+  { id: 'burgundy', label: 'Burgundy', css: '#7d0026' },
+  { id: 'orange',   label: 'Orange',   css: '#e85d00' },
+  { id: 'yellow',   label: 'Yellow',   css: '#e6c200' },
+  { id: 'green',    label: 'Green',    css: '#1a6b1a' },
+  { id: 'teal',     label: 'Teal',     css: '#007070' },
+  { id: 'blue',     label: 'Blue',     css: '#0044cc' },
+  { id: 'purple',   label: 'Purple',   css: '#5500bb' },
+  { id: 'pink',     label: 'Pink',     css: '#e0518a' },
+  { id: 'gold',     label: 'Gold',     css: 'linear-gradient(135deg,#d4af37,#a07800)' },
+  { id: 'copper',   label: 'Copper',   css: '#b87333' },
+  { id: 'brown',    label: 'Brown',    css: '#6b3a1f' },
+  { id: 'beige',    label: 'Beige',    css: '#d4bc8a' },
+  { id: 'tan',      label: 'Tan',      css: '#c09a6b' },
+];
+
 // ─── State ─────────────────────────────────────────────────────────
 let state = {
   screen: 'estimator',
-  estimateMode: 'quick',   // 'quick' | 'detailed'
+  estimateMode: 'quick',
   year: '',
   make: '',
   model: '',
@@ -50,6 +94,8 @@ let state = {
   wrapMode: 'full',
   selectedPanels: new Set(),
   vinylType: 'basic',
+  finish: '',
+  color: '',
   makes: [],
   models: [],
   loadingMakes: false,
@@ -255,9 +301,8 @@ function renderVehicleSection() {
     if (state.model) modelInp.value = state.model;
   }
 
-  document.querySelectorAll('.pill[data-type]').forEach(b => {
-    b.classList.toggle('active', b.dataset.type === state.vehicleType);
-  });
+  const typeSel = document.getElementById('sel-type-detailed');
+  if (typeSel) typeSel.value = state.vehicleType;
 
   updateCalculateBtn();
 }
@@ -316,6 +361,58 @@ function togglePanel(id, el) {
 
 function selectAllPanels() { PANELS.forEach(p => state.selectedPanels.add(p.id)); renderPanelSection(); updateCalculateBtn(); }
 function clearAllPanels()  { state.selectedPanels.clear(); renderPanelSection(); updateCalculateBtn(); }
+
+// ─── Color & Finish Section ────────────────────────────────────────
+function renderColorSection() {
+  const section = document.getElementById('color-section');
+  if (!section) return;
+  const finishes = FINISHES[state.vinylType] || FINISHES.basic;
+  const currentFinish = finishes.find(f => f.id === state.finish);
+  const showColors = currentFinish?.hasColor ?? false;
+
+  section.innerHTML = `
+    <div class="section-title">Finish</div>
+    <div class="finish-pills">
+      ${finishes.map(f => `
+        <button class="finish-pill${state.finish === f.id ? ' active' : ''}"
+                onclick="onFinishChange('${f.id}')">
+          ${f.label}
+        </button>`).join('')}
+    </div>
+    ${showColors ? `
+      <div class="section-title" style="margin-top:14px">Color</div>
+      <div class="color-grid">
+        ${COLORS.map(c => `
+          <button class="color-swatch${state.color === c.id ? ' active' : ''}"
+                  title="${c.label}"
+                  onclick="onColorChange('${c.id}')"
+                  style="background:${c.css};${c.css.startsWith('linear') ? '' : ''}">
+            ${state.color === c.id ? '<span class="swatch-check">✓</span>' : ''}
+          </button>`).join('')}
+      </div>
+      ${state.color ? `<div class="color-label">${COLORS.find(c=>c.id===state.color)?.label || ''}</div>` : ''}
+    ` : ''}`;
+}
+
+function onFinishChange(id) {
+  state.finish = id;
+  const f = (FINISHES[state.vinylType] || []).find(f => f.id === id);
+  if (!f?.hasColor) state.color = '';
+  renderColorSection();
+}
+
+function onColorChange(id) {
+  state.color = id;
+  renderColorSection();
+}
+
+function metroLink() {
+  const color = state.color;
+  const finish = state.finish;
+  if (color) return `https://www.metrorestyling.com/collections/${color}-vinyl-wrap`;
+  if (finish) return `https://www.metrorestyling.com/collections/${finish}-vinyl-wrap`;
+  return 'https://www.metrorestyling.com';
+}
 
 // ─── Calculate Button State ────────────────────────────────────────
 function updateCalculateBtn() {
@@ -380,8 +477,12 @@ function renderResults() {
       <div style="font-size:13px;color:var(--text-muted);line-height:1.6">${panelList}</div>
     </div>`;
 
-  const query = encodeURIComponent(state.vinylType === 'premium' ? 'premium vinyl wrap' : 'vinyl wrap');
-  document.getElementById('metro-link').href = `https://www.metrorestyling.com/search?q=${query}`;
+  const colorObj  = COLORS.find(c => c.id === state.color);
+  const finishObj = (FINISHES[state.vinylType] || []).find(f => f.id === state.finish);
+  const selectionLabel = [finishObj?.label, colorObj?.label].filter(Boolean).join(' · ') || 'Browse all vinyl';
+  const link = document.getElementById('metro-link');
+  link.href = metroLink();
+  link.textContent = `🛒 ${selectionLabel} — Order at MetroRestyling.com`;
   showScreen('results');
 }
 
@@ -436,12 +537,9 @@ function onMakeChange(make) {
 
 function onTypeChange(id) {
   state.vehicleType = id;
-  // Update quick grid
   renderQuickTypeGrid();
-  // Update detailed type pills
-  document.querySelectorAll('.pill[data-type]').forEach(b => {
-    b.classList.toggle('active', b.dataset.type === id);
-  });
+  const typeSel = document.getElementById('sel-type-detailed');
+  if (typeSel) typeSel.value = id;
   renderPanelSection();
   updateCalculateBtn();
 }
@@ -456,8 +554,12 @@ function onWrapMode(mode) {
 
 function onVinylType(type) {
   state.vinylType = type;
+  // Reset finish/color if switching types (they have different finish options)
+  state.finish = '';
+  state.color = '';
   document.getElementById('vinyl-basic').classList.toggle('active', type === 'basic');
   document.getElementById('vinyl-premium').classList.toggle('active', type === 'premium');
+  renderColorSection();
 }
 
 // ─── Build DOM ─────────────────────────────────────────────────────
@@ -501,20 +603,17 @@ function buildApp() {
                    oninput="filterCombo('make')" onfocus="openCombo('make')" onblur="blurCombo('make')">
             <div id="make-combo-list" class="combo-list"></div>
           </div>
-          <div class="combo-wrap" id="model-combo-wrap" style="margin-bottom:0">
+          <div class="combo-wrap" id="model-combo-wrap">
             <input id="inp-model" class="combo-input" type="text" placeholder="— select make first —"
                    disabled autocomplete="off" spellcheck="false"
                    oninput="filterCombo('model')" onfocus="openCombo('model')" onblur="blurCombo('model')">
             <div id="model-combo-list" class="combo-list"></div>
           </div>
-        </div>
-        <div class="section">
-          <div class="section-title">Vehicle Type</div>
-          <div class="pill-group" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            ${VEHICLE_TYPES.map(t => `
-              <button class="pill" style="min-width:0;white-space:normal;line-height:1.3;text-align:left;padding:10px 12px" data-type="${t.id}" onclick="onTypeChange('${t.id}')">
-                ${t.icon} ${t.label}
-              </button>`).join('')}
+          <div class="select-wrap" style="margin-bottom:0">
+            <select id="sel-type-detailed" onchange="onTypeChange(this.value)">
+              <option value="">Body style…</option>
+              ${VEHICLE_TYPES.map(t => `<option value="${t.id}">${t.icon} ${t.label}</option>`).join('')}
+            </select>
           </div>
         </div>
       </div>
@@ -548,6 +647,8 @@ function buildApp() {
           <div class="vinyl-price-tag" id="premium-price-tag">${fmt(settings.premiumPricePerSqft)}/ft²</div>
         </div>
       </div>
+
+      <div class="section" id="color-section"></div>
 
       <button class="btn-primary" id="btn-calculate" disabled onclick="renderResults()">
         Calculate Estimate
@@ -605,6 +706,7 @@ function buildApp() {
   renderQuickTypeGrid();
   renderVehicleSection();
   renderPanelSection();
+  renderColorSection();
   updateCalculateBtn();
 }
 
