@@ -301,9 +301,6 @@ function renderVehicleSection() {
     if (state.model) modelInp.value = state.model;
   }
 
-  const typeSel = document.getElementById('sel-type-detailed');
-  if (typeSel) typeSel.value = state.vehicleType;
-
   updateCalculateBtn();
 }
 
@@ -422,7 +419,7 @@ function updateCalculateBtn() {
   const hasPanels = state.wrapMode === 'full' || state.selectedPanels.size > 0;
   const hasVehicle = state.estimateMode === 'quick'
     ? hasType
-    : (state.year && state.make && state.model && hasType);
+    : (state.year && state.make && state.model);
   btn.disabled = !(hasVehicle && hasPanels);
 }
 
@@ -538,8 +535,6 @@ function onMakeChange(make) {
 function onTypeChange(id) {
   state.vehicleType = id;
   renderQuickTypeGrid();
-  const typeSel = document.getElementById('sel-type-detailed');
-  if (typeSel) typeSel.value = id;
   renderPanelSection();
   updateCalculateBtn();
 }
@@ -608,12 +603,6 @@ function buildApp() {
                    disabled autocomplete="off" spellcheck="false"
                    oninput="filterCombo('model')" onfocus="openCombo('model')" onblur="blurCombo('model')">
             <div id="model-combo-list" class="combo-list"></div>
-          </div>
-          <div class="select-wrap" style="margin-bottom:0">
-            <select id="sel-type-detailed" onchange="onTypeChange(this.value)">
-              <option value="">Body style…</option>
-              ${VEHICLE_TYPES.map(t => `<option value="${t.id}">${t.icon} ${t.label}</option>`).join('')}
-            </select>
           </div>
         </div>
       </div>
