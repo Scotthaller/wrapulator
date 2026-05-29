@@ -345,6 +345,61 @@ select:focus, input[type="number"]:focus {
   padding-right: 72px;
 }
 
+/* Combobox */
+.combo-wrap {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.combo-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 12px 14px;
+  font-size: 16px;
+  outline: none;
+}
+
+.combo-input:focus { border-color: var(--accent); }
+.combo-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.combo-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.combo-list.open { display: block; }
+
+.combo-item {
+  padding: 11px 14px;
+  font-size: 15px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.combo-item:last-child { border-bottom: none; }
+.combo-item:hover, .combo-item:active { background: rgba(59,130,246,0.2); }
+.combo-item strong { color: var(--accent); font-weight: 700; }
+
+.combo-empty {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
 /* Mode tabs */
 .mode-tab {
   flex: 1;

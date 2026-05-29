@@ -75,10 +75,10 @@ async function fetchMakes() {
   state.loadingMakes = true;
   renderVehicleSection();
   try {
-    const res = await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json');
+    const res = await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/GetMakesForVehicleType/car?format=json');
     const data = await res.json();
     state.makes = data.Results
-      .map(r => r.Make_Name)
+      .map(r => r.MakeName)
       .filter(n => n && n.trim())
       .sort();
   } catch {
@@ -174,6 +174,45 @@ function renderQuickTypeGrid() {
   `).join('');
 }
 
+// ─── Combobox helpers ──────────────────────────────────────────────
+function openCombo(field) {
+  filterCombo(field);
+  document.getElementById(`${field}-combo-list`).classList.add('open');
+}
+
+function blurCombo(field) {
+  // Delay so click on list item fires first
+  setTimeout(() => {
+    document.getElementById(`${field}-combo-list`).classList.remove('open');
+  }, 150);
+}
+
+function filterCombo(field) {
+  const inp = document.getElementById(`inp-${field}`);
+  const list = document.getElementById(`${field}-combo-list`);
+  const q = inp.value.trim().toLowerCase();
+  const items = field === 'make' ? state.makes : state.models;
+  const filtered = q ? items.filter(i => i.toLowerCase().includes(q)) : items;
+
+  list.innerHTML = filtered.slice(0, 80).map(item => {
+    const safe = item.replace(/'/g, '&#39;');
+    const hi = q ? item.replace(new RegExp(`(${q})`, 'gi'), '<strong>$1</strong>') : item;
+    return `<div class="combo-item" onmousedown="selectCombo('${field}','${safe}')">${hi}</div>`;
+  }).join('');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="combo-empty">No results</div>';
+  }
+  list.classList.add('open');
+}
+
+function selectCombo(field, value) {
+  document.getElementById(`inp-${field}`).value = value;
+  document.getElementById(`${field}-combo-list`).classList.remove('open');
+  if (field === 'make') onMakeChange(value);
+  else { state.model = value; updateCalculateBtn(); }
+}
+
 // ─── Detailed Vehicle Section ──────────────────────────────────────
 function renderVehicleSection() {
   const yearSel = document.getElementById('sel-year');
@@ -182,41 +221,40 @@ function renderVehicleSection() {
   if (yearSel.options.length <= 1) {
     yearSel.innerHTML = '<option value="">Select year…</option>';
     const cur = new Date().getFullYear() + 1;
-    for (let y = cur; y >= 1985; y--) {
-      yearSel.add(new Option(y, y));
-    }
+    for (let y = cur; y >= 1985; y--) yearSel.add(new Option(y, y));
     yearSel.value = state.year || '';
   }
 
-  const makeSel = document.getElementById('sel-make');
+  const makeInp = document.getElementById('inp-make');
   if (state.loadingMakes) {
-    makeSel.innerHTML = '<option value="">Loading makes…</option>';
-    makeSel.disabled = true;
+    makeInp.placeholder = 'Loading makes…';
+    makeInp.disabled = true;
+    makeInp.value = '';
   } else if (!state.makes.length) {
-    makeSel.innerHTML = '<option value="">— select year first —</option>';
-    makeSel.disabled = true;
+    makeInp.placeholder = '— select year first —';
+    makeInp.disabled = true;
+    makeInp.value = '';
   } else {
-    makeSel.disabled = false;
-    makeSel.innerHTML = '<option value="">Select make…</option>';
-    state.makes.forEach(m => makeSel.add(new Option(m, m)));
-    makeSel.value = state.make;
+    makeInp.placeholder = 'Type or select make…';
+    makeInp.disabled = false;
+    if (state.make) makeInp.value = state.make;
   }
 
-  const modelSel = document.getElementById('sel-model');
+  const modelInp = document.getElementById('inp-model');
   if (state.loadingModels) {
-    modelSel.innerHTML = '<option value="">Loading models…</option>';
-    modelSel.disabled = true;
+    modelInp.placeholder = 'Loading models…';
+    modelInp.disabled = true;
+    modelInp.value = '';
   } else if (!state.models.length) {
-    modelSel.innerHTML = '<option value="">— select make first —</option>';
-    modelSel.disabled = true;
+    modelInp.placeholder = '— select make first —';
+    modelInp.disabled = true;
+    modelInp.value = '';
   } else {
-    modelSel.disabled = false;
-    modelSel.innerHTML = '<option value="">Select model…</option>';
-    state.models.forEach(m => modelSel.add(new Option(m, m)));
-    modelSel.value = state.model;
+    modelInp.placeholder = 'Type or select model…';
+    modelInp.disabled = false;
+    if (state.model) modelInp.value = state.model;
   }
 
-  // Keep vehicle type pills in sync
   document.querySelectorAll('.pill[data-type]').forEach(b => {
     b.classList.toggle('active', b.dataset.type === state.vehicleType);
   });
@@ -378,6 +416,10 @@ function onYearChange(year) {
   state.make = '';
   state.model = '';
   state.models = [];
+  const mi = document.getElementById('inp-make');
+  const mo = document.getElementById('inp-model');
+  if (mi) mi.value = '';
+  if (mo) mo.value = '';
   if (year) fetchMakes();
   else { state.makes = []; renderVehicleSection(); }
 }
@@ -386,6 +428,8 @@ function onMakeChange(make) {
   state.make = make;
   state.model = '';
   state.models = [];
+  const mo = document.getElementById('inp-model');
+  if (mo) mo.value = '';
   if (make && state.year) fetchModels(make, state.year);
   else renderVehicleSection();
 }
@@ -451,15 +495,17 @@ function buildApp() {
               <option value="">Select year…</option>
             </select>
           </div>
-          <div class="select-wrap">
-            <select id="sel-make" disabled onchange="onMakeChange(this.value)">
-              <option value="">— select year first —</option>
-            </select>
+          <div class="combo-wrap" id="make-combo-wrap">
+            <input id="inp-make" class="combo-input" type="text" placeholder="— select year first —"
+                   disabled autocomplete="off" spellcheck="false"
+                   oninput="filterCombo('make')" onfocus="openCombo('make')" onblur="blurCombo('make')">
+            <div id="make-combo-list" class="combo-list"></div>
           </div>
-          <div class="select-wrap" style="margin-bottom:0">
-            <select id="sel-model" disabled onchange="state.model=this.value; updateCalculateBtn()">
-              <option value="">— select make first —</option>
-            </select>
+          <div class="combo-wrap" id="model-combo-wrap" style="margin-bottom:0">
+            <input id="inp-model" class="combo-input" type="text" placeholder="— select make first —"
+                   disabled autocomplete="off" spellcheck="false"
+                   oninput="filterCombo('model')" onfocus="openCombo('model')" onblur="blurCombo('model')">
+            <div id="model-combo-list" class="combo-list"></div>
           </div>
         </div>
         <div class="section">
