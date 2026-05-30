@@ -364,8 +364,16 @@ function renderColorSection() {
   const section = document.getElementById('color-section');
   if (!section) return;
   const finishes = FINISHES[state.vinylType] || FINISHES.basic;
+
+  // Auto-select first finish if none selected
+  if (!state.finish || !finishes.find(f => f.id === state.finish)) {
+    state.finish = finishes[0].id;
+    if (!finishes[0].hasColor) state.color = '';
+  }
+
   const currentFinish = finishes.find(f => f.id === state.finish);
   const showColors = currentFinish?.hasColor ?? false;
+  const selectedColor = COLORS.find(c => c.id === state.color);
 
   section.innerHTML = `
     <div class="section-title">Finish</div>
@@ -377,18 +385,23 @@ function renderColorSection() {
         </button>`).join('')}
     </div>
     ${showColors ? `
-      <div class="section-title" style="margin-top:14px">Color</div>
-      <div class="color-grid">
-        ${COLORS.map(c => `
-          <button class="color-swatch${state.color === c.id ? ' active' : ''}"
-                  title="${c.label}"
-                  onclick="onColorChange('${c.id}')"
-                  style="background:${c.css};${c.css.startsWith('linear') ? '' : ''}">
-            ${state.color === c.id ? '<span class="swatch-check">✓</span>' : ''}
-          </button>`).join('')}
+      <div class="section-title" style="margin-top:14px">
+        Color${selectedColor ? ` — <span style="color:var(--text)">${selectedColor.label}</span>` : ''}
       </div>
-      ${state.color ? `<div class="color-label">${COLORS.find(c=>c.id===state.color)?.label || ''}</div>` : ''}
-    ` : ''}`;
+      <div class="color-grid">
+        ${COLORS.map(c => {
+          const isGrad = c.css.startsWith('linear');
+          const bg = isGrad ? `background:${c.css}` : `background-color:${c.css}`;
+          const isActive = state.color === c.id;
+          return `<div class="color-swatch-wrap" onclick="onColorChange('${c.id}')">
+            <div class="color-swatch${isActive ? ' active' : ''}" style="${bg}">
+              ${isActive ? '<span class="swatch-check">✓</span>' : ''}
+            </div>
+            <div class="swatch-name">${c.label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    ` : `<div style="font-size:13px;color:var(--text-muted);margin-top:10px">No color selection needed for this finish.</div>`}`;
 }
 
 function onFinishChange(id) {
